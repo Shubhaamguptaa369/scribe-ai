@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scribe AI — Smart Documentation Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#fafafa;
+    --surface:#ffffff;
+    --surface2:#f4f5f9;
+    --border:#e8eaf0;
+    --accent:#2563eb;
+    --accent2:#3b82f6;
+    --green:#059669;
+    --purple:#7c3aed;
+    --text:#111827;
+    --muted:#6b7280;
+    --sidebar-bg:#111827;
+  }
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+  /* TOP NAV */
+  nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+  .nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.05rem}
+  .nav-logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .nav-right{display:flex;align-items:center;gap:14px}
+  .plan-badge{background:#2563eb15;color:#2563eb;border:1px solid #2563eb30;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600}
+  .upgrade-btn{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;padding:6px 14px;border-radius:7px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+
+  /* LAYOUT */
+  .layout{display:grid;grid-template-columns:1fr 1fr;flex:1;height:calc(100vh - 56px)}
+
+  /* LEFT PANEL */
+  .left-panel{border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface)}
+  .panel-top{padding:20px 24px;border-bottom:1px solid var(--border)}
+  .panel-top h2{font-size:1rem;font-weight:700;margin-bottom:4px}
+  .panel-top p{font-size:0.8rem;color:var(--muted)}
+  .input-area{flex:1;display:flex;flex-direction:column;padding:20px 24px;gap:16px}
+
+  /* MODE TABS */
+  .mode-tabs{display:flex;gap:6px}
+  .mode-tab{padding:6px 14px;border-radius:7px;font-size:0.8rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s}
+  .mode-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* TEXTAREA */
+  .notes-textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:10px;padding:14px;font-family:'Inter',sans-serif;font-size:0.85rem;line-height:1.7;color:var(--text);outline:none;background:var(--surface2);transition:border .15s;min-height:200px}
+  .notes-textarea:focus{border-color:var(--accent2);background:var(--surface)}
+
+  /* META ROW */
+  .meta-row{display:flex;gap:10px}
+  .meta-input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:0.82rem;color:var(--text);outline:none;background:var(--surface2)}
+  .meta-input:focus{border-color:var(--accent2)}
+
+  /* GENERATE BTN */
+  .gen-btn{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;padding:12px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s}
+  .gen-btn:hover{opacity:.92}
+  .gen-btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* EXAMPLES */
+  .examples-row{display:flex;gap:8px;flex-wrap:wrap}
+  .example-chip{padding:5px 12px;border:1px solid var(--border);border-radius:20px;font-size:0.75rem;cursor:pointer;color:var(--muted);transition:all .15s;background:var(--surface)}
+  .example-chip:hover{border-color:var(--accent2);color:var(--accent)}
+
+  /* RIGHT PANEL — DOC OUTPUT */
+  .right-panel{display:flex;flex-direction:column;background:var(--surface)}
+  .doc-toolbar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .doc-toolbar-left{display:flex;align-items:center;gap:10px}
+  .doc-title-input{font-size:0.95rem;font-weight:600;border:none;outline:none;font-family:'Inter',sans-serif;color:var(--text);background:transparent}
+  .toolbar-actions{display:flex;gap:8px}
+  .tool-btn{background:var(--surface2);border:1px solid var(--border);padding:6px 12px;border-radius:7px;font-size:0.78rem;cursor:pointer;font-family:'Inter',sans-serif;color:var(--muted);transition:all .15s}
+  .tool-btn:hover{color:var(--text);border-color:var(--accent2)}
+  .doc-content{flex:1;overflow-y:auto;padding:32px 40px}
+
+  /* DOC STYLES */
+  .doc-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;color:var(--muted)}
+  .doc-empty-icon{font-size:3rem;opacity:.3}
+  .doc-empty p{font-size:0.9rem}
+
+  .doc-header{margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid var(--border)}
+  .doc-type-badge{display:inline-flex;align-items:center;gap:6px;background:#2563eb10;color:#2563eb;border:1px solid #2563eb20;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+  .doc-main-title{font-family:'Crimson Pro',serif;font-size:2rem;font-weight:600;color:var(--text);margin-bottom:8px;line-height:1.2}
+  .doc-meta{display:flex;gap:16px;font-size:0.78rem;color:var(--muted)}
+
+  .doc-section{margin-bottom:24px}
+  .doc-section-title{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .doc-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+  .doc-body{font-size:0.88rem;line-height:1.8;color:#374151}
+
+  /* ACTION ITEMS */
+  .action-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--surface2);border-radius:8px;margin-bottom:6px;font-size:0.84rem}
+  .action-check{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);flex-shrink:0;margin-top:1px;cursor:pointer}
+  .action-check.checked{background:var(--green);border-color:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px}
+  .action-owner{font-size:0.72rem;color:var(--muted);margin-top:2px}
+
+  /* TAGS */
+  .tags-row{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:500}
+
+  /* SPINNER */
+  .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* PROCESSING */
+  .processing{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px}
+  .processing-ring{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite}
+  .processing p{font-size:0.85rem;color:var(--muted)}
+  .processing-step{font-size:0.78rem;color:var(--accent)}
+
+  /* STATS BAR */
+  .stats-bar{padding:10px 24px;border-top:1px solid var(--border);display:flex;gap:20px;background:var(--surface2)}
+  .stat-item{font-size:0.75rem;color:var(--muted);display:flex;align-items:center;gap:5px}
+  .stat-item strong{color:var(--text)}
+
+  @media(max-width:768px){
+    .layout{grid-template-columns:1fr;height:auto}
+    .right-panel{min-height:400px}
+    .doc-content{padding:20px}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">✍️</div>
+    Scribe<span style="color:#7c3aed">AI</span>
+  </div>
+  <div class="nav-right">
+    <span class="plan-badge">Pro Plan</span>
+    <button class="upgrade-btn">Upgrade Team →</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- LEFT: INPUT -->
+  <div class="left-panel">
+    <div class="panel-top">
+      <h2>Generate Documentation</h2>
+      <p>Reduces manual documentation time by 70% — paste notes, get structured docs instantly</p>
+    </div>
+    <div class="input-area">
+      <div class="mode-tabs">
+        <div class="mode-tab active" onclick="setMode(this,'meeting')">📋 Meeting Notes</div>
+        <div class="mode-tab" onclick="setMode(this,'code')">💻 Code Docs</div>
+        <div class="mode-tab" onclick="setMode(this,'spec')">📐 Tech Spec</div>
+      </div>
+
+      <div class="meta-row">
+        <input class="meta-input" id="docTitle" placeholder="Document title (optional)"/>
+        <input class="meta-input" id="docAuthor" placeholder="Author"/>
+      </div>
+
+      <div>
+        <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Quick Examples</div>
+        <div class="examples-row">
+          <div class="example-chip" onclick="loadExample('sprint')">🏃 Sprint Review</div>
+          <div class="example-chip" onclick="loadExample('design')">🎨 Design Review</div>
+          <div class="example-chip" onclick="loadExample('incident')">🚨 Incident Report</div>
+        </div>
+      </div>
+
+      <textarea class="notes-textarea" id="notesInput" placeholder="Paste your meeting notes, raw text, or bullet points here...
+
+Example:
+- discussed new auth flow, sarah will handle JWT
+- performance issue on dashboard, response was 2 seconds, mike fixing by thursday
+- launch planned for june 20th, need QA sign-off
+- budget approved for redis upgrade"></textarea>
+
+      <button class="gen-btn" id="genBtn" onclick="generateDocs()">
+        ✨ Generate Documentation
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT: OUTPUT -->
+  <div class="right-panel">
+    <div class="doc-toolbar">
+      <div class="doc-toolbar-left">
+        <input class="doc-title-input" id="outputTitle" value="Untitled Document" readonly/>
+      </div>
+      <div class="toolbar-actions">
+        <button class="tool-btn" onclick="copyDoc()">📋 Copy</button>
+        <button class="tool-btn" onclick="exportDoc()">⬇️ Export</button>
+      </div>
+    </div>
+    <div class="doc-content" id="docContent">
+      <div class="doc-empty">
+        <div class="doc-empty-icon">📄</div>
+        <p>Your generated documentation will appear here</p>
+        <span style="font-size:.8rem">Supports meeting notes, code docs & tech specs</span>
+      </div>
+    </div>
+    <div class="stats-bar" id="statsBar" style="display:none">
+      <div class="stat-item"><strong id="wordCount">0</strong> words</div>
+      <div class="stat-item"><strong id="actionCount">0</strong> action items</div>
+      <div class="stat-item"><strong id="tagCount">0</strong> tags</div>
+      <div class="stat-item" style="margin-left:auto;color:var(--green)">✓ <strong>3x faster</strong> than manual</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentMode = 'meeting';
+
+function setMode(el, mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+const examples = {
+  sprint: `Sprint 23 review - June 10th 2026
+Attendees: Sarah (eng lead), Mike (backend), Priya (QA), James (devops)
+- Completed: auth module refactor, dashboard performance fix (response time down from 2s to 360ms using redis), user onboarding flow
+- Blocked: payment integration waiting on stripe webhook docs from vendor
+- Priya found 3 critical bugs in checkout flow - Mike to fix by Thursday
+- Velocity improved 12% this sprint - team doing great
+- Next sprint focus: mobile responsiveness and API rate limiting
+- James to set up staging environment for new redis cluster by EOD Friday
+- Budget approved for additional cloud instances ($2k/month)
+- Launch date confirmed June 20th - need QA sign-off by June 17th`,
+
+  design: `Design review for new dashboard UI
+Attendees: Sara K (design), Alex C (frontend), Product team
+- New component library approved - moving to shadcn/ui
+- Color system updated: primary blue #2563eb, keeping existing typography
+- Sara to finalize mobile breakpoints by next week
+- Alex flagged performance concern with hero animation on low-end devices - Sara to create a reduced-motion version
+- Card layout approved, table layout rejected - too dense for first-time users
+- User testing planned for June 18th - Sara to recruit 5 participants
+- Open question: dark mode support in v1? Deferred to v2
+- Accessibility audit required before launch - James to schedule`,
+
+  incident: `Incident report - API outage June 9th 2026
+Duration: 2:15am - 4:40am UTC (2h 25min)
+Impact: 100% of API requests failing, ~3,200 affected users
+Root cause: Redis memory limit reached, caused cascade failure to postgres
+Timeline:
+- 2:15 automated alert fired
+- 2:28 on-call engineer Mike responded
+- 3:10 root cause identified as redis eviction policy misconfigured
+- 3:45 fix deployed to production
+- 4:40 all systems confirmed stable
+Action items: increase redis memory limit, fix eviction policy, add better monitoring, runbook to be written
+Post-mortem scheduled for June 12th`
+};
+
+function loadExample(key) {
+  document.getElementById('notesInput').value = examples[key];
+  if(key === 'sprint') document.getElementById('docTitle').value = 'Sprint 23 Review';
+  if(key === 'design') document.getElementById('docTitle').value = 'Dashboard UI Design Review';
+  if(key === 'incident') document.getElementById('docTitle').value = 'Incident Report – API Outage';
+}
+
+async function generateDocs() {
+  const notes = document.getElementById('notesInput').value.trim();
+  if (!notes) return;
+
+  const title = document.getElementById('docTitle').value || 'Generated Document';
+  const author = document.getElementById('docAuthor').value || 'Scribe AI';
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Generating...';
+
+  document.getElementById('docContent').innerHTML = `
+    <div class="processing">
+      <div class="processing-ring"></div>
+      <p>Processing your notes with AI...</p>
+      <div class="processing-step" id="procStep">Analyzing content structure...</div>
+    </div>`;
+
+  const steps = ['Analyzing content structure...','Extracting key points...','Identifying action items...','Generating documentation...'];
+  let s = 0;
+  const stepInterval = setInterval(() => {
+    s = (s+1) % steps.length;
+    const el = document.getElementById('procStep');
+    if(el) el.textContent = steps[s];
+  }, 800);
+
+  const modePrompts = {
+    meeting: 'meeting notes into structured meeting documentation',
+    code: 'into technical code documentation',
+    spec: 'into a technical specification document'
+  };
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Convert these ${modePrompts[currentMode]}. Respond ONLY with valid JSON, no markdown, no backticks:
+{
+  "title": "document title",
+  "type": "Meeting Notes|Technical Doc|Spec",
+  "summary": "2-3 sentence executive summary",
+  "keyPoints": ["point 1","point 2","point 3","point 4"],
+  "actionItems": [
+    {"task": "task description", "owner": "person name or Team", "due": "deadline if mentioned or Soon"}
+  ],
+  "decisions": ["decision 1","decision 2"],
+  "tags": [{"label":"tag","color":"blue|green|purple|orange"}],
+  "nextSteps": "one sentence about what happens next"
+}
+
+Notes:
+${notes}`
+        }]
+      })
+    });
+
+    clearInterval(stepInterval);
+    const data = await res.json();
+    const text = data.content[0].text.replace(/```json|```/g,'').trim();
+    const doc = JSON.parse(text);
+    renderDoc(doc, title || doc.title, author);
+
+  } catch(e) {
+    clearInterval(stepInterval);
+    document.getElementById('docContent').innerHTML = `<div style="padding:40px;color:var(--muted);text-align:center">Could not generate documentation. Please try again.</div>`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✨ Generate Documentation';
+}
+
+function renderDoc(doc, title, author) {
+  document.getElementById('outputTitle').value = title || doc.title;
+  const now = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+  const colorMap = {blue:'#dbeafe;color:#1d4ed8',green:'#d1fae5;color:#065f46',purple:'#ede9fe;color:#5b21b6',orange:'#fef3c7;color:#92400e'};
+
+  let actionHTML = (doc.actionItems||[]).map((a,i)=>`
+    <div class="action-item">
+      <div class="action-check" id="chk${i}" onclick="toggleCheck(${i})"></div>
+      <div>
+        <div>${a.task}</div>
+        <div class="action-owner">👤 ${a.owner} &nbsp;·&nbsp; 📅 ${a.due}</div>
+      </div>
+    </div>`).join('');
+
+  let tagsHTML = (doc.tags||[]).map(t=>{
+    const c = colorMap[t.color]||colorMap.blue;
+    return `<span class="tag" style="background:#${c.split('#')[1]}">${t.label}</span>`;
+  }).join('');
+
+  document.getElementById('docContent').innerHTML = `
+    <div class="doc-header">
+      <div class="doc-type-badge">📋 ${doc.type||'Documentation'}</div>
+      <div class="doc-main-title">${title||doc.title}</div>
+      <div class="doc-meta">
+        <span>📅 ${now}</span>
+        <span>✍️ ${author}</span>
+        <span>🤖 Generated by Scribe AI</span>
+      </div>
+    </div>
+
+    <div class="doc-section">
+      <div class="doc-section-title">Executive Summary</div>
+      <div class="doc-body">${doc.summary||''}</div>
+    </div>
+
+    ${(doc.keyPoints||[]).length ? `<div class="doc-section">
+      <div class="doc-section-title">Key Points</div>
+      ${doc.keyPoints.map(p=>`<div class="action-item" style="gap:10px"><span style="color:var(--accent)">→</span><span class="doc-body">${p}</span></div>`).join('')}
+    </div>` : ''}
+
+    ${actionHTML ? `<div class="doc-section">
+      <div class="doc-section-title">Action Items</div>
+      ${actionHTML}
+    </div>` : ''}
+
+    ${(doc.decisions||[]).length ? `<div class="doc-section">
+      <div class="doc-section-title">Decisions Made</div>
+      ${doc.decisions.map(d=>`<div class="action-item"><span style="color:var(--green)">✓</span> ${d}</div>`).join('')}
+    </div>` : ''}
+
+    ${doc.nextSteps ? `<div class="doc-section">
+      <div class="doc-section-title">Next Steps</div>
+      <div class="doc-body">${doc.nextSteps}</div>
+    </div>` : ''}
+
+    ${tagsHTML ? `<div class="doc-section">
+      <div class="doc-section-title">Tags</div>
+      <div class="tags-row">${tagsHTML}</div>
+    </div>` : ''}`;
+
+  const wordCount = document.getElementById('docContent').innerText.split(/\s+/).length;
+  document.getElementById('wordCount').textContent = wordCount;
+  document.getElementById('actionCount').textContent = (doc.actionItems||[]).length;
+  document.getElementById('tagCount').textContent = (doc.tags||[]).length;
+  document.getElementById('statsBar').style.display = 'flex';
+}
+
+function toggleCheck(i) {
+  const el = document.getElementById('chk'+i);
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
+}
+
+function copyDoc() {
+  const text = document.getElementById('docContent').innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = event.target;
+    btn.textContent = '✓ Copied!';
+    setTimeout(()=>btn.textContent='📋 Copy', 1500);
+  });
+}
+
+function exportDoc() {
+  const title = document.getElementById('outputTitle').value;
+  const content = document.getElementById('docContent').innerHTML;
+  const html = `<!DOCTYPE html><html><head><title>${title}</title><style>body{font-family:Inter,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#111}</style></head><body>${content}</body></html>`;
+  const blob = new Blob([html], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = title.replace(/\s+/g,'-').toLowerCase()+'.html';
+  a.click();
+}
+</script>
+</body>
+</html>
